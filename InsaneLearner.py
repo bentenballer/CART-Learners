@@ -13,4 +13,4 @@ class InsaneLearner(object):
         for learner in self.learners:
             result = learner.query(points)
 if __name__ == "__main__":
-    print("the secret clue is 'zzyzx'")
+    pass
