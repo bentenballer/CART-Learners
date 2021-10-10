@@ -1,0 +1,132 @@
+""""""
+"""  		  	   		   	 		  		  		    	 		 		   		 		  
+A simple wrapper for linear regression.  (c) 2015 Tucker Balch  		  	   		   	 		  		  		    	 		 		   		 		  
+
+Copyright 2018, Georgia Institute of Technology (Georgia Tech)  		  	   		   	 		  		  		    	 		 		   		 		  
+Atlanta, Georgia 30332  		  	   		   	 		  		  		    	 		 		   		 		  
+All Rights Reserved  		  	   		   	 		  		  		    	 		 		   		 		  
+
+Template code for CS 4646/7646  		  	   		   	 		  		  		    	 		 		   		 		  
+
+Georgia Tech asserts copyright ownership of this template and all derivative  		  	   		   	 		  		  		    	 		 		   		 		  
+works, including solutions to the projects assigned in this course. Students  		  	   		   	 		  		  		    	 		 		   		 		  
+and other users of this template code are advised not to share it with others  		  	   		   	 		  		  		    	 		 		   		 		  
+or to make it available on publicly viewable websites including repositories  		  	   		   	 		  		  		    	 		 		   		 		  
+such as github and gitlab.  This copyright statement should not be removed  		  	   		   	 		  		  		    	 		 		   		 		  
+or edited.  		  	   		   	 		  		  		    	 		 		   		 		  
+
+We do grant permission to share solutions privately with non-students such  		  	   		   	 		  		  		    	 		 		   		 		  
+as potential employers. However, sharing with other current or future  		  	   		   	 		  		  		    	 		 		   		 		  
+students of CS 7646 is prohibited and subject to being investigated as a  		  	   		   	 		  		  		    	 		 		   		 		  
+GT honor code violation.  		  	   		   	 		  		  		    	 		 		   		 		  
+
+-----do not edit anything above this line---  		  	   		   	 		  		  		    	 		 		   		 		  
+"""
+import numpy as np
+from numpy import random
+
+class RTLearner(object):
+    """
+    :param verbose: If “verbose” is True, your code can print out information for debugging.
+        If verbose = False your code should not generate ANY output. When we test your code, verbose will be False.
+    :type verbose: bool
+    """
+
+    def __init__(self, leaf_size=1, verbose=False):
+        """
+        Constructor method
+        """
+        self.leaf_size = leaf_size
+
+    def author(self):
+        """
+        :return: The GT username of the student
+        :rtype: str
+        """
+        return "cchan313"  # replace tb34 with your Georgia Tech username
+
+    def buildtree(self, data):
+        if data.shape[0] == 1:return np.array([-1, data[0, -1], -1, -1])
+        elif np.all(data[:,-1] == data[:,-1][0]): return np.array([-1, data[0, -1], -1, -1])
+        elif data.shape[0] <= self.leaf_size: return np.array([-1, np.median(data[:,-1]), -1, -1])
+        else:
+            i = random.randint(low=0,high=data.shape[1]-1)
+            split_val = np.median(data[:,i])
+            if np.all(data[:, i] <= split_val): return np.array([-1, np.median([data[:,-1]]), -1, -1])
+            left_tree = self.buildtree(data[data[:,i] <= split_val])
+            right_tree = self.buildtree(data[data[:,i] > split_val])
+            if left_tree.ndim == 1: root = np.array([i, split_val, 1, 2])
+            else: root = np.array([i, split_val, 1, left_tree.shape[0] + 1])
+            append = (root, left_tree, right_tree)
+            tree = np.vstack(append)
+            return tree
+
+    def add_evidence(self, data_x, data_y):
+        """
+        Add training data to learner
+
+        :param data_x: A set of feature values used to train the learner
+        :type data_x: numpy.ndarray
+        :param data_y: The value we are attempting to predict given the X data
+        :type data_y: numpy.ndarray
+        """
+        # decision tree algorithm (Jr Quinlan)
+        data = np.concatenate((data_x, data_y[:,None]), axis=1)
+        tree = self.buildtree(data)
+        self.tree = tree
+
+    def query(self, points):
+        """
+        Estimate a set of test points given the model we built.
+
+        :param points: A numpy array with each row corresponding to a specific query.
+        :type points: numpy.ndarray
+        :return: The predicted result of the input data according to the trained model
+        :rtype: numpy.ndarray
+        """
+        dimension = np.ndim(points)
+        if dimension == 1:
+            results = np.zeros(1)
+        else:
+            results = np.zeros(points.shape[0])
+        if dimension == 1:
+            traverse = True
+            i = 0
+            while traverse:
+                node = self.tree[i]
+                if node[0] == -1:
+                    results[0] = node[1]
+                    traverse = False
+                else:
+                    factor = points[int(node[0])]
+                    splitval = node[1]
+                    left = node[2]
+                    right = node[3]
+                    if factor <= splitval:
+                        i = i + int(left)
+                    else:
+                        i = i + int(right)
+        else:
+            j = 0
+            for point in points:
+                traverse = True
+                i = 0
+                while traverse:
+                    if np.ndim(self.tree) == 1:
+                        node = self.tree
+                    else:
+                        node = self.tree[i]
+                    if node[0] == -1:
+                        results[j] = node[1]
+                        j = j + 1
+                        traverse = False
+                    else:
+                        factor = point[int(node[0])]
+                        splitval = node[1]
+                        left = node[2]
+                        right = node[3]
+                        if factor <= splitval:
+                            i = i + int(left)
+                        else:
+                            i = i + int(right)
+        return results
